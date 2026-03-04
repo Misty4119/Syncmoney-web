@@ -216,5 +216,5 @@ pnpm run preview
 
 ## License and Notes
 
-- This project is private; licensing is at the discretion of the project owner.
+- **License:** This project is licensed under the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0). See [LICENSE](LICENSE) for the full text. Copyright 2025-2026 Noie Linmimeng.
 - If the backend runs on a port other than 8080, update `server.proxy` in `vite.config.ts`.
