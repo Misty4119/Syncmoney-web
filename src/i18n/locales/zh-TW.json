@@ -1,0 +1,183 @@
+{
+  "common": {
+    "loading": "載入中...",
+    "save": "儲存",
+    "cancel": "取消",
+    "confirm": "確認",
+    "delete": "刪除",
+    "refresh": "重新整理",
+    "search": "搜尋",
+    "export": "匯出",
+    "import": "匯入",
+    "back": "返回",
+    "next": "下一步",
+    "previous": "上一步",
+    "submit": "提交",
+    "reset": "重置",
+    "close": "關閉",
+    "yes": "是",
+    "no": "否",
+    "error": "錯誤",
+    "success": "成功",
+    "warning": "警告",
+    "info": "資訊",
+    "noData": "無資料"
+  },
+  "auth": {
+    "appName": "Syncmoney",
+    "login": "登入",
+    "logout": "登出",
+    "apiKey": "API Key",
+    "apiKeyPlaceholder": "請輸入 API Key",
+    "loginFailed": "登入失敗，請檢查 API Key",
+    "loginSuccess": "登入成功"
+  },
+  "nav": {
+    "dashboard": "儀表板",
+    "auditLog": "審計日誌",
+    "systemStatus": "系統狀態",
+    "settings": "設定",
+    "collapse": "收起",
+    "config": "插件設定"
+  },
+  "dashboard": {
+    "title": "儀表板",
+    "totalSupply": "總貨幣供應",
+    "totalPlayers": "總玩家數",
+    "todayTransactions": "今日交易",
+    "onlinePlayers": "在線玩家",
+    "circuitBreaker": "保險絲狀態",
+    "systemHealth": "系統狀態",
+    "recentTransactions": "最近交易",
+    "transactionTrend": "交易趨勢",
+    "connected": "已連線",
+    "disconnected": "已斷線",
+    "lastUpdated": "最後更新"
+  },
+  "audit": {
+    "title": "審計日誌",
+    "player": "玩家",
+    "type": "類型",
+    "amount": "金額",
+    "balance": "餘額",
+    "source": "來源",
+    "server": "伺服器",
+    "time": "時間",
+    "reason": "原因",
+    "typeOptions": {
+      "all": "全部",
+      "deposit": "存入",
+      "withdraw": "取出",
+      "transfer": "轉帳",
+      "setBalance": "設定餘額",
+      "set_balance": "設定餘額"
+    },
+    "filters": {
+      "player": "玩家名稱",
+      "type": "交易類型",
+      "startTime": "開始時間",
+      "endTime": "結束時間"
+    },
+    "quickFilters": {
+      "today": "今天",
+      "yesterday": "昨天",
+      "last7Days": "近7天",
+      "last30Days": "近30天",
+      "custom": "自訂範圍"
+    },
+    "pagination": {
+      "showing": "顯示",
+      "to": "至",
+      "of": "共",
+      "items": "項"
+    }
+  },
+  "system": {
+    "title": "系統狀態",
+    "plugin": "插件狀態",
+    "connectivity": "連線狀態",
+    "version": "版本",
+    "mode": "模式",
+    "uptime": "運行時間",
+    "redis": "Redis 連線",
+    "database": "資料庫",
+    "sseStream": "SSE 即時串流",
+    "circuitBreaker": "保險絲",
+    "shadowSync": "Shadow 同步",
+    "memory": "記憶體",
+    "threads": "執行緒",
+    "memory.usage": "使用率",
+    "status": {
+      "connected": "已連線",
+      "disconnected": "已斷線",
+      "normal": "正常",
+      "warning": "警告",
+      "locked": "鎖定"
+    }
+  },
+  "settings": {
+    "title": "設定",
+    "general": "一般設定",
+    "serverName": "伺服器名稱",
+    "currencyName": "貨幣名稱",
+    "currencySymbol": "貨幣符號",
+    "webAdmin": "網頁管理介面",
+    "enabled": "啟用",
+    "port": "連接埠",
+    "apiKey": "API Key",
+    "regenerateApiKey": "重新產生 API Key",
+    "theme": "主題",
+    "themeOptions": {
+      "dark": "深色",
+      "light": "淺色"
+    },
+    "language": "語言",
+    "languageOptions": {
+      "zh-TW": "繁體中文",
+      "en-US": "English"
+    },
+    "timezone": "時區",
+    "timezoneOptions": {
+      "UTC": "UTC 標準時間",
+      "Asia/Taipei": "台北時間 (Asia/Taipei)",
+      "America/New_York": "美東時間 (America/New_York)",
+      "Europe/London": "倫敦時間 (Europe/London)"
+    },
+    "save": "儲存設定",
+    "reload": "重新載入"
+  },
+  "config": {
+    "title": "插件設定",
+    "redis": "Redis 連線",
+    "database": "資料庫",
+    "circuitBreaker": "保險絲",
+    "audit": "審計日誌",
+    "economy": "經濟系統",
+    "enabled": "已啟用",
+    "disabled": "已停用",
+    "decimalPlaces": "小數位",
+    "reload": "重新載入設定",
+    "reloadSuccess": "設定已重新載入",
+    "reloadSuccessDesc": "插件設定已成功重新載入",
+    "reloadError": "重新載入失敗",
+    "reloadErrorDesc": "無法重新載入設定，請查看伺服器日誌",
+    "loadError": "載入失敗",
+    "loadErrorDesc": "無法載入插件設定"
+  },
+  "errors": {
+    "networkError": "網路錯誤，請檢查連線",
+    "serverError": "伺服器錯誤",
+    "unauthorized": "未經授權",
+    "forbidden": "權限不足",
+    "notFound": "找不到資源",
+    "rateLimited": "請求過於頻繁，請稍後再試"
+  },
+  "notification": {
+    "newTransaction": "新交易",
+    "transactionReceived": "收到新交易記錄",
+    "circuitBreaker": "保險絲觸發",
+    "circuitBreakerWarning": "保險絲已觸發，系統已鎖定",
+    "systemAlert": "系統警告",
+    "newTransactionDesc": "{player}: {amount}"
+  }
+}

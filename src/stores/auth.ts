@@ -1,0 +1,63 @@
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import { apiClient, type ApiResponse } from '@/api/client'
+
+export const useAuthStore = defineStore('auth', () => {
+  const apiKey = ref<string>(localStorage.getItem('apiKey') || '')
+  const isAuthenticated = ref<boolean>(!!apiKey.value)
+  const isLoading = ref<boolean>(false)
+  const error = ref<string>('')
+
+  const isLoggedIn = computed(() => isAuthenticated.value)
+
+  async function login(key: string): Promise<boolean> {
+    isLoading.value = true
+    error.value = ''
+
+    try {
+      const response = await apiClient.get<ApiResponse<any>>('/api/system/status', {
+        headers: { Authorization: `Bearer ${key}` }
+      })
+
+      if (response.data && response.data.success) {
+        apiKey.value = key
+        localStorage.setItem('apiKey', key)
+        isAuthenticated.value = true
+        return true
+      } else {
+        error.value = response.data?.error?.message || 'Login failed'
+        return false
+      }
+    } catch (e: any) {
+      error.value = e.response?.data?.error?.message || 'Network error'
+      return false
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  function logout() {
+    apiKey.value = ''
+    localStorage.removeItem('apiKey')
+    isAuthenticated.value = false
+  }
+
+  function checkAuth() {
+    const storedKey = localStorage.getItem('apiKey')
+    if (storedKey) {
+      apiKey.value = storedKey
+      isAuthenticated.value = true
+    }
+  }
+
+  return {
+    apiKey,
+    isAuthenticated,
+    isLoading,
+    error,
+    isLoggedIn,
+    login,
+    logout,
+    checkAuth
+  }
+})
