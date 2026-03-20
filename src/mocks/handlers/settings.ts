@@ -1,20 +1,20 @@
 import { http, HttpResponse } from 'msw'
 
 export const settingsHandlers = [
-  // Get settings
+
   http.get('/api/settings', () => {
     return HttpResponse.json({
       success: true,
       data: {
         theme: 'dark',
-        language: 'zh-TW',
+        language: 'en-US',
         serverName: 'Minecraft Server',
-        currencyName: '金幣'
+        currencyName: 'Coins'
       }
     })
   }),
 
-  // Update theme
+
   http.post('/api/settings/theme', async ({ request }) => {
     const body = await request.json() as { theme: string }
     return HttpResponse.json({
@@ -23,7 +23,7 @@ export const settingsHandlers = [
     })
   }),
 
-  // Update language
+
   http.post('/api/settings/language', async ({ request }) => {
     const body = await request.json() as { language: string }
     return HttpResponse.json({

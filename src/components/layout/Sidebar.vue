@@ -13,6 +13,26 @@
       <span v-if="!collapsed" class="sidebar-label text-lg font-bold gradient-text">Syncmoney</span>
     </div>
 
+    <!-- Server Node Selector -->
+    <div v-if="nodesStore.enabledNodes.length > 0" class="px-3 py-2 border-b border-surface-200/50 dark:border-surface-700/50">
+      <select
+        v-model="selectedNodeIndex"
+        class="w-full px-3 py-2 text-sm rounded-lg bg-surface-100 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-surface-700 dark:text-surface-300 focus:outline-none focus:ring-2 focus:ring-primary/50"
+        @change="handleNodeChange"
+      >
+        <option v-if="!nodesStore.currentNode" value="" disabled>
+          {{ t('nodes.selectServer') || 'Select a server...' }}
+        </option>
+        <option
+          v-for="(node, index) in nodesStore.enabledNodes"
+          :key="index"
+          :value="index"
+        >
+          {{ node.name }} {{ node.status === 'offline' ? '(Offline)' : '' }}
+        </option>
+      </select>
+    </div>
+
     <!-- Navigation -->
     <nav class="flex-1 py-4 space-y-1 px-3 overflow-y-auto">
       <router-link
@@ -94,10 +114,12 @@
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useNodesStore } from '@/stores/nodes'
+import { ref, watch, computed } from 'vue'
 import { useBreakpoints, breakpointsTailwind } from '@vueuse/core'
 import {
   LayoutDashboard, Activity, FileText, Settings, Wrench,
-  LogOut, ChevronLeft, ChevronRight, Zap, X
+  LogOut, ChevronLeft, ChevronRight, Zap, X, LayoutGrid, Server
 } from 'lucide-vue-next'
 
 interface Props {
@@ -115,16 +137,42 @@ const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const nodesStore = useNodesStore()
 const breakpoints = useBreakpoints(breakpointsTailwind)
 const isMobile = breakpoints.smaller('md')
 
-const navItems = [
+const selectedNodeIndex = ref<number>(0)
+
+watch(() => nodesStore.currentNodeIndex, (newIndex) => {
+  selectedNodeIndex.value = newIndex
+}, { immediate: true })
+
+function handleNodeChange() {
+  if (typeof selectedNodeIndex.value === 'number') {
+    nodesStore.selectNode(selectedNodeIndex.value)
+  }
+}
+
+const baseNavItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'nav.dashboard' },
   { path: '/system',    icon: Activity,         label: 'nav.systemStatus' },
   { path: '/audit',     icon: FileText,         label: 'nav.auditLog' },
   { path: '/config',    icon: Wrench,           label: 'nav.config' },
   { path: '/settings',  icon: Settings,         label: 'nav.settings' },
 ]
+
+const centralNavItems = computed(() => {
+  const items = []
+  if (nodesStore.enabledNodes.length > 0) {
+    items.push({ path: '/central', icon: LayoutGrid, label: 'nav.centralDashboard' })
+  }
+  if (authStore.isAuthenticated) {
+    items.push({ path: '/nodes', icon: Server, label: 'nav.nodesManagement' })
+  }
+  return items
+})
+
+const navItems = computed(() => [...baseNavItems, ...centralNavItems.value])
 
 function isActive(path: string): boolean {
   return route.path === path

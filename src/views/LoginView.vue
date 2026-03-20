@@ -10,12 +10,12 @@
     <div class="glass-card w-full max-w-md p-10 relative z-10 animate-fade-slide-up border border-primary/20 shadow-[0_0_40px_var(--color-primary-glow)] bg-surface-bg/70 backdrop-blur-xl">
       <!-- Brand -->
       <div class="text-center mb-10">
-        <div class="w-20 h-20 rounded-2xl bg-surface-base border border-primary/40 flex items-center justify-center mx-auto mb-6 shadow-glow focus:outline-none relative overflow-hidden group">
+        <div class="w-20 h-20 rounded-2xl bg-surface-50 border border-primary/40 flex items-center justify-center mx-auto mb-6 shadow-glow focus:outline-none relative overflow-hidden group">
           <div class="absolute inset-0 bg-primary/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out"></div>
           <Zap class="w-10 h-10 text-primary group-hover:scale-110 group-hover:text-white transition-all duration-500 relative z-10" />
         </div>
         <h1 class="text-3xl font-bold tracking-wider mb-2 text-surface-900 dark:text-white drop-shadow-sm transition-colors">{{ t('auth.appName') }}</h1>
-        <p class="text-xs text-primary/80 tracking-[0.3em] uppercase font-mono">Admin Console</p>
+        <p class="text-xs text-primary/80 tracking-[0.3em] uppercase font-mono">{{ t('auth.subtitle') }}</p>
       </div>
 
       <form @submit.prevent="handleLogin" class="space-y-5">
@@ -28,7 +28,7 @@
               id="api-key"
               v-model="apiKey"
               type="password"
-              class="w-full pl-11 pr-4 py-3 bg-surface-base border border-surface-border rounded-xl text-surface-900 dark:text-surface-100 placeholder-surface-500 focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-300 shadow-inner"
+              class="w-full pl-11 pr-4 py-3 bg-surface-50 border border-surface-200 rounded-xl text-surface-700 dark:text-surface-100 placeholder-surface-500 focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-300 shadow-inner"
               :placeholder="t('auth.apiKeyPlaceholder')"
               required
             />

@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw'
 import { auditFixtures } from '../fixtures/audit'
 
 export const auditHandlers = [
-  // Search audit logs
+
   http.get('/api/audit/search', ({ request }) => {
     const url = new URL(request.url)
     const page = parseInt(url.searchParams.get('page') || '1')
@@ -13,7 +13,7 @@ export const auditHandlers = [
 
     let filteredData = [...auditFixtures]
 
-    // Apply filters
+
     if (player) {
       filteredData = filteredData.filter(r =>
         r.playerName.toLowerCase().includes(player.toLowerCase())

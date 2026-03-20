@@ -1,131 +1,191 @@
 import { ref, onUnmounted } from 'vue'
+import { handleError } from '@/types/errors'
 
-export type WebSocketEventType = 'transaction' | 'circuit_break' | 'system_alert' | 'connected'
+export type WebSocketEventType = 'open' | 'close' | 'error' | 'message'
+
+export type WebSocketMessageData = Record<string, unknown>
 
 export interface WebSocketMessage {
   type: WebSocketEventType
-  data: any
+  data: WebSocketMessageData
   timestamp: number
 }
 
-export function useWebSocket() {
+export interface UseWebSocketOptions {
+  url?: string
+  protocols?: string | string[]
+  reconnect?: boolean
+  reconnectInterval?: number
+  maxReconnectAttempts?: number
+}
+
+/**
+ * [SYNC-WEB-001]
+ * WebSocket Composable for real-time bidirectional communication.
+ * Includes automatic reconnection with Exponential Backoff + Jitter to prevent server overload.
+ */
+export function useWebSocket(options: UseWebSocketOptions = {}) {
+  const {
+    reconnect = true,
+    reconnectInterval = 3000,
+    maxReconnectAttempts = 5
+  } = options
+
   const connected = ref(false)
+  const connectionStatus = ref<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected')
   const lastMessage = ref<WebSocketMessage | null>(null)
-  const error = ref<string>('')
+  const errorMessage = ref<string>('')
 
-  let eventSource: EventSource | null = null
+  let ws: WebSocket | null = null
   let reconnectAttempts = 0
-  const maxReconnectAttempts = 5
-  const reconnectDelay = 3000
   let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
+  let currentBaseUrl = '/ws'
 
-  const messageHandlers = new Map<WebSocketEventType, ((data: any) => void)[]>()
+  const messageHandlers = new Map<WebSocketEventType, ((data: WebSocketMessageData) => void)[]>()
 
-  function connect(url: string = `http://${window.location.host}/sse`) {
-    // Close existing connection if any
+  function connect(url: string = '') {
+
+    currentBaseUrl = url || '/ws'
+    connectionStatus.value = 'connecting'
+
     disconnect()
 
-    // Get API key from localStorage and append to URL
     const apiKey = localStorage.getItem('apiKey')
-    const fullUrl = apiKey ? `${url}?apiKey=${encodeURIComponent(apiKey)}` : url
+    
+    if (!apiKey) {
+      errorMessage.value = 'No API key found. Please login first.'
+      console.error('WebSocket connection failed: No API key')
+      return
+    }
 
+
+    obtainSessionToken(apiKey)
+      .then(token => {
+        if (!token) {
+          errorMessage.value = 'Failed to obtain session token'
+          return
+        }
+        
+        const fullUrl = `${currentBaseUrl}?token=${encodeURIComponent(token)}`
+        establishConnection(fullUrl)
+      })
+      .catch(err => {
+        errorMessage.value = err.message || 'Failed to connect'
+        console.error('WebSocket connection error:', err)
+      })
+  }
+
+  /**
+   * [SYNC-WEB-004] Fetch secure WS token.
+   */
+  async function obtainSessionToken(apiKey: string): Promise<string | null> {
     try {
-      eventSource = new EventSource(fullUrl)
+      const response = await fetch('/api/auth/ws-token', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      })
 
-      eventSource.onopen = () => {
-        connected.value = true
-        error.value = ''
-        reconnectAttempts = 0
-        console.log('SSE connection established')
+      if (!response.ok) {
+        throw new Error(`Token request failed: ${response.status}`)
       }
 
-      eventSource.onmessage = (event) => {
-        try {
-          // Parse SSE message format: "data: {...}"
-          const messageText = event.data
-          if (!messageText) return
+      const data = await response.json()
+      
+      if (data.success && data.data && data.data.token) {
+        return data.data.token
+      }
+      
+      throw new Error('Invalid token response')
+    } catch (err) {
+      console.error('Failed to obtain session token:', err)
+      return null
+    }
+  }
 
-          const message: WebSocketMessage = JSON.parse(messageText)
+  /**
+   * [SYNC-WEB-005] Establish WebSocket connection with the given URL.
+   */
+  function establishConnection(fullUrl: string) {
+    try {
+      ws = new WebSocket(fullUrl)
+
+      ws.onopen = () => {
+        connected.value = true
+        connectionStatus.value = 'connected'
+        errorMessage.value = ''
+        reconnectAttempts = 0
+        console.log('WebSocket connection established')
+
+        const handlers = messageHandlers.get('open')
+        if (handlers) {
+          handlers.forEach(handler => handler({}))
+        }
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const message: WebSocketMessage = {
+            type: 'message',
+            data: JSON.parse(event.data),
+            timestamp: Date.now()
+          }
           lastMessage.value = message
 
-          const handlers = messageHandlers.get(message.type as WebSocketEventType)
+          const handlers = messageHandlers.get('message')
           if (handlers) {
             handlers.forEach(handler => handler(message.data))
           }
         } catch (e) {
-          console.error('Failed to parse SSE message:', e)
+          console.error('Failed to parse WebSocket message:', e)
         }
       }
 
-      eventSource.addEventListener('connected', (event: MessageEvent) => {
-        try {
-          const data = JSON.parse(event.data)
-          console.log('SSE connected:', data)
-          const handlers = messageHandlers.get('connected')
-          if (handlers) {
-            handlers.forEach(handler => handler(data))
-          }
-        } catch (e) {
-          console.error('Failed to parse connected event:', e)
-        }
-      })
+      ws.onerror = (e) => {
+        errorMessage.value = 'WebSocket connection error'
+        connectionStatus.value = 'error'
+        console.error('WebSocket error:', e)
 
-      eventSource.addEventListener('transaction', (event: MessageEvent) => {
-        try {
-          const data = JSON.parse(event.data)
-          const handlers = messageHandlers.get('transaction')
-          if (handlers) {
-            handlers.forEach(handler => handler(data))
-          }
-        } catch (e) {
-          console.error('Failed to parse transaction event:', e)
+        const handlers = messageHandlers.get('error')
+        if (handlers) {
+          handlers.forEach(handler => handler({ type: 'error', message: e.type }))
         }
-      })
+      }
 
-      eventSource.addEventListener('circuit_break', (event: MessageEvent) => {
-        try {
-          const data = JSON.parse(event.data)
-          const handlers = messageHandlers.get('circuit_break')
-          if (handlers) {
-            handlers.forEach(handler => handler(data))
-          }
-        } catch (e) {
-          console.error('Failed to parse circuit_break event:', e)
-        }
-      })
-
-      eventSource.addEventListener('system_alert', (event: MessageEvent) => {
-        try {
-          const data = JSON.parse(event.data)
-          const handlers = messageHandlers.get('system_alert')
-          if (handlers) {
-            handlers.forEach(handler => handler(data))
-          }
-        } catch (e) {
-          console.error('Failed to parse system_alert event:', e)
-        }
-      })
-
-      eventSource.onerror = (e) => {
-        error.value = 'SSE connection error'
-        console.error('SSE error:', e)
+      ws.onclose = (event) => {
         connected.value = false
+        connectionStatus.value = 'disconnected'
+        console.log('WebSocket connection closed:', event.code, event.reason)
 
-        // Attempt to reconnect
-        if (reconnectAttempts < maxReconnectAttempts) {
+        const handlers = messageHandlers.get('close')
+        if (handlers) {
+          handlers.forEach(handler => handler({ code: event.code, reason: event.reason }))
+        }
+
+
+        if (reconnect && reconnectAttempts < maxReconnectAttempts) {
           reconnectAttempts++
-          console.log(`SSE reconnecting... Attempt ${reconnectAttempts}/${maxReconnectAttempts}`)
+          const baseDelay = reconnectInterval * Math.pow(2, reconnectAttempts - 1)
+          const jitter = Math.random() * 1000
+
+          const delay = Math.min(baseDelay + jitter, 30000)
+          
+          console.log(`WebSocket reconnecting in ${Math.round(delay)}ms... Attempt ${reconnectAttempts}/${maxReconnectAttempts}`)
           reconnectTimeout = setTimeout(() => {
-            connect(url)
-          }, reconnectDelay)
-        } else {
-          error.value = 'SSE connection failed after maximum retry attempts'
-          console.error('SSE max reconnect attempts reached')
+            connect(currentBaseUrl)
+          }, delay)
+        } else if (reconnectAttempts >= maxReconnectAttempts) {
+          errorMessage.value = 'WebSocket connection failed after maximum retry attempts'
+          connectionStatus.value = 'error'
+          console.error('WebSocket max reconnect attempts reached')
         }
       }
-    } catch (e: any) {
-      error.value = e.message || 'Failed to connect'
-      console.error('SSE connection error:', e)
+    } catch (error: unknown) {
+      const err = handleError(error)
+      errorMessage.value = err.message || 'Failed to connect'
+      console.error('WebSocket connection error:', error)
     }
   }
 
@@ -135,20 +195,35 @@ export function useWebSocket() {
       reconnectTimeout = null
     }
 
-    if (eventSource) {
-      eventSource.close()
-      eventSource = null
+    if (ws) {
+      ws.close()
+      ws = null
     }
     connected.value = false
+    reconnectAttempts = 0
   }
 
-  function on(type: WebSocketEventType, handler: (data: any) => void) {
+  function send(data: unknown): boolean {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try {
+        ws.send(JSON.stringify(data))
+        return true
+      } catch (e) {
+        console.error('Failed to send WebSocket message:', e)
+        return false
+      }
+    }
+    console.warn('WebSocket is not connected, cannot send message')
+    return false
+  }
+
+  function on(type: WebSocketEventType, handler: (data: WebSocketMessageData) => void) {
     const handlers = messageHandlers.get(type) || []
     handlers.push(handler)
     messageHandlers.set(type, handlers)
   }
 
-  function off(type: WebSocketEventType, handler: (data: any) => void) {
+  function off(type: WebSocketEventType, handler: (data: WebSocketMessageData) => void) {
     const handlers = messageHandlers.get(type)
     if (handlers) {
       const index = handlers.indexOf(handler)
@@ -164,10 +239,12 @@ export function useWebSocket() {
 
   return {
     connected,
+    connectionStatus,
     lastMessage,
-    error,
+    error: errorMessage,
     connect,
     disconnect,
+    send,
     on,
     off
   }

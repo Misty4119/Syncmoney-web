@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { apiClient, type ApiResponse } from '@/api/client'
+import type { SystemStatus } from '@/api/types'
+import { handleError } from '@/types/errors'
 
 export const useAuthStore = defineStore('auth', () => {
   const apiKey = ref<string>(localStorage.getItem('apiKey') || '')
@@ -15,7 +17,7 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = ''
 
     try {
-      const response = await apiClient.get<ApiResponse<any>>('/api/system/status', {
+      const response = await apiClient.get<ApiResponse<SystemStatus>>('/api/system/status', {
         headers: { Authorization: `Bearer ${key}` }
       })
 
@@ -28,8 +30,9 @@ export const useAuthStore = defineStore('auth', () => {
         error.value = response.data?.error?.message || 'Login failed'
         return false
       }
-    } catch (e: any) {
-      error.value = e.response?.data?.error?.message || 'Network error'
+    } catch (err: unknown) {
+      const errorInfo = handleError(err)
+      error.value = errorInfo.message || 'Network error'
       return false
     } finally {
       isLoading.value = false
@@ -46,7 +49,32 @@ export const useAuthStore = defineStore('auth', () => {
     const storedKey = localStorage.getItem('apiKey')
     if (storedKey) {
       apiKey.value = storedKey
-      isAuthenticated.value = true
+
+      validateToken(storedKey)
+    }
+  }
+
+
+  async function validateToken(key: string): Promise<boolean> {
+    try {
+
+      const tempApiClient = apiClient.create()
+      const response = await tempApiClient.get<ApiResponse<SystemStatus>>('/api/system/status', {
+        headers: { Authorization: `Bearer ${key}` }
+      })
+
+      if (response.data && response.data.success) {
+        isAuthenticated.value = true
+        return true
+      } else {
+
+        logout()
+        return false
+      }
+    } catch {
+
+      logout()
+      return false
     }
   }
 

@@ -1,23 +1,25 @@
 import { ref } from 'vue'
 import { apiClient } from '@/api/client'
-import type { SystemStatus } from '@/api/types'
+import type { SystemStatus, ApiResponse } from '@/api/types'
+import { handleError } from '@/types/errors'
 
 export function useSystem() {
   const status = ref<Partial<SystemStatus>>({})
   const loading = ref(false)
-  const error = ref<string>('')
+  const errorMessage = ref<string>('')
 
   async function loadStatus() {
     loading.value = true
-    error.value = ''
+    errorMessage.value = ''
 
     try {
-      const response: any = await apiClient.get('/api/system/status')
+      const response = await apiClient.get<ApiResponse<SystemStatus>>('/api/system/status')
       if (response.data?.success && response.data?.data) {
         status.value = response.data.data
       }
-    } catch (e: any) {
-      error.value = e.message || 'Failed to load system status'
+    } catch (err: unknown) {
+      const error = handleError(err)
+      errorMessage.value = error.message || 'Failed to load system status'
     } finally {
       loading.value = false
     }
@@ -25,7 +27,7 @@ export function useSystem() {
 
   async function checkRedis() {
     try {
-      const response: any = await apiClient.get('/api/system/redis')
+      const response = await apiClient.get<ApiResponse<unknown>>('/api/system/redis')
       return response.data?.success ? response.data.data : null
     } catch {
       return null
@@ -34,7 +36,7 @@ export function useSystem() {
 
   async function checkBreaker() {
     try {
-      const response: any = await apiClient.get('/api/system/breaker')
+      const response = await apiClient.get<ApiResponse<unknown>>('/api/system/breaker')
       return response.data?.success ? response.data.data : null
     } catch {
       return null
@@ -44,7 +46,7 @@ export function useSystem() {
   return {
     status,
     loading,
-    error,
+    error: errorMessage,
     loadStatus,
     checkRedis,
     checkBreaker

@@ -1,34 +1,60 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import type { WebSocketMessageData } from './useWebSocket'
 
-// Mock WebSocket
-class MockWebSocket {
+
+class MockEventSource {
   static CONNECTING = 0
   static OPEN = 1
   static CLOSING = 2
   static CLOSED = 3
   
-  readyState = MockWebSocket.OPEN
+  readyState = MockEventSource.OPEN
   onopen: (() => void) | null = null
   onmessage: ((event: { data: string }) => void) | null = null
-  onerror: (() => void) | null = null
+  onerror: ((event: Event) => void) | null = null
   onclose: (() => void) | null = null
+  
+  private listeners: Map<string, ((event: MessageEvent) => void)[]> = new Map()
   
   constructor(public url: string) {
     setTimeout(() => this.onopen?.(), 0)
   }
   
-  send = vi.fn()
+  addEventListener(type: string, handler: (event: MessageEvent) => void) {
+    const handlers = this.listeners.get(type) || []
+    handlers.push(handler)
+    this.listeners.set(type, handlers)
+  }
+  
+  removeEventListener(type: string, handler: (event: MessageEvent) => void) {
+    const handlers = this.listeners.get(type)
+    if (handlers) {
+      const index = handlers.indexOf(handler)
+      if (index > -1) {
+        handlers.splice(index, 1)
+      }
+    }
+  }
+  
+
+  triggerEvent(type: string, data: WebSocketMessageData) {
+    const handlers = this.listeners.get(type)
+    if (handlers) {
+      handlers.forEach(h => h({ data: JSON.stringify(data) } as MessageEvent))
+    }
+  }
+  
   close = vi.fn()
 }
 
-vi.stubGlobal('WebSocket', MockWebSocket)
+vi.stubGlobal('EventSource', MockEventSource)
 
-describe('useWebSocket', () => {
-  let useWebSocket: () => ReturnType<typeof import('@/composables/useWebSocket').useWebSocket>
+describe('useSSE', () => {
+  let useSSE: () => ReturnType<typeof import('@/composables/useSSE').useSSE>
   
   beforeEach(async () => {
-    const module = await import('@/composables/useWebSocket')
-    useWebSocket = module.useWebSocket
+    const module = await import('@/composables/useSSE')
+    useSSE = module.useSSE
   })
   
   afterEach(() => {
@@ -36,43 +62,42 @@ describe('useWebSocket', () => {
   })
 
   it('should initialize with disconnected state', () => {
-    const ws = useWebSocket()
-    expect(ws.connected.value).toBe(false)
+    const sse = useSSE()
+    expect(sse.connected.value).toBe(false)
   })
 
-  it('should connect to websocket server', () => {
-    const ws = useWebSocket()
-    ws.connect('ws://localhost:8080/ws')
+  it('should connect to SSE server', () => {
+    const sse = useSSE()
+    sse.connect('/sse')
     
-    // Wait for mock WebSocket to connect
     return new Promise(resolve => setTimeout(() => {
-      expect(ws.connected.value).toBe(true)
+      expect(sse.connected.value).toBe(true)
       resolve(true)
     }, 10))
   })
 
   it('should register and trigger event handlers', () => {
-    const ws = useWebSocket()
+    const sse = useSSE()
     
     const handler = vi.fn()
-    ws.on('transaction', handler)
+    sse.on('transaction', handler)
     
-    ws.connect('ws://localhost:8080/ws')
+    sse.connect('/sse')
     
     return new Promise(resolve => setTimeout(() => {
-      // Verify handler registration works
-      expect(ws.on).toBeDefined()
+
+      expect(sse.on).toBeDefined()
       resolve(true)
     }, 10))
   })
 
   it('should disconnect properly', () => {
-    const ws = useWebSocket()
-    ws.connect('ws://localhost:8080/ws')
+    const sse = useSSE()
+    sse.connect('/sse')
     
     return new Promise(resolve => setTimeout(() => {
-      ws.disconnect()
-      expect(ws.connected.value).toBe(false)
+      sse.disconnect()
+      expect(sse.connected.value).toBe(false)
       resolve(true)
     }, 10))
   })

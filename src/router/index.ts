@@ -43,6 +43,25 @@ const router = createRouter({
       name: 'config',
       component: () => import('@/views/ConfigView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/central',
+      name: 'central',
+      component: () => import('@/views/CentralDashboardView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/nodes',
+      name: 'nodes',
+      component: () => import('@/views/NodesManagementView.vue'),
+      meta: { requiresAuth: true }
+    },
+
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: () => import('@/views/NotFoundView.vue'),
+      meta: { requiresAuth: false }
     }
   ]
 })

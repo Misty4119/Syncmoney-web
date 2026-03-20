@@ -18,7 +18,7 @@
           :class="theme === opt.value
             ? 'border-primary bg-primary/10 shadow-glow-primary scale-[1.02]'
             : 'border-surface-200 dark:border-surface-700 hover:border-primary/30 hover:bg-surface-50/50 dark:hover:bg-surface-950/50'"
-          @click="theme = opt.value as 'dark' | 'light'; handleThemeChange()"
+          @click="handleThemeChange(opt)"
         >
           <div class="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <div class="relative z-10 flex items-center gap-3 mb-4">
@@ -51,7 +51,6 @@
       <select
         v-model="language"
         class="w-full max-w-xs px-4 py-3 bg-surface-50/50 dark:bg-surface-950/50 backdrop-blur-md border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-surface-200 focus:outline-none focus:border-primary focus:shadow-glow-sm transition-all duration-300 appearance-none cursor-pointer"
-        @change="handleLanguageChange"
       >
         <option value="zh-TW" class="bg-surface-bg dark:bg-surface-900">{{ t('settings.languageOptions.zh-TW') }}</option>
         <option value="en-US" class="bg-surface-bg dark:bg-surface-900">{{ t('settings.languageOptions.en-US') }}</option>
@@ -65,18 +64,14 @@
           <div class="p-2 bg-primary/10 rounded-xl">
             <Clock class="w-5 h-5 text-primary" />
           </div>
-          <span class="text-base font-bold gradient-text uppercase tracking-wide">{{ t('settings.timezone') || 'Timezone' }}</span>
+          <span class="text-base font-bold gradient-text uppercase tracking-wide">{{ t('settings.timezone') }}</span>
         </div>
       </template>
       <select
         v-model="timezone"
         class="w-full max-w-xs px-4 py-3 bg-surface-50/50 dark:bg-surface-950/50 backdrop-blur-md border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-surface-200 focus:outline-none focus:border-primary focus:shadow-glow-sm transition-all duration-300 appearance-none cursor-pointer"
-        @change="handleTimezoneChange"
       >
-        <option value="UTC" class="bg-surface-bg dark:bg-surface-900">{{ t('settings.timezoneOptions.UTC') || 'UTC' }}</option>
-        <option value="Asia/Taipei" class="bg-surface-bg dark:bg-surface-900">{{ t('settings.timezoneOptions.Asia/Taipei') || 'Asia/Taipei' }}</option>
-        <option value="America/New_York" class="bg-surface-bg dark:bg-surface-900">{{ t('settings.timezoneOptions.America/New_York') || 'America/New_York' }}</option>
-        <option value="Europe/London" class="bg-surface-bg dark:bg-surface-900">{{ t('settings.timezoneOptions.Europe/London') || 'Europe/London' }}</option>
+        <option v-for="tz in timezoneOptions" :key="tz" :value="tz" class="bg-surface-bg dark:bg-surface-900">{{ tz }}</option>
       </select>
     </Card>
 
@@ -90,37 +85,76 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '@/stores/settings'
+import { useNotificationStore } from '@/stores/notification'
 import { Palette, Globe, Moon, Sun, Clock, CheckCircle, Save } from 'lucide-vue-next'
 import Card from '@/components/common/Card.vue'
 import Button from '@/components/common/Button.vue'
 
 const { t, locale } = useI18n()
 const settingsStore = useSettingsStore()
+const notificationStore = useNotificationStore()
 
 const theme = ref(settingsStore.theme)
 const language = ref(settingsStore.locale)
 const timezone = ref(settingsStore.timezone)
 const saving = ref(false)
 
+
+watch(theme, (newTheme) => {
+  settingsStore.setTheme(newTheme)
+  applyThemePreview(newTheme)
+})
+
 const themeOptions = [
   { value: 'light', label: 'settings.themeOptions.light', icon: Sun },
   { value: 'dark', label: 'settings.themeOptions.dark', icon: Moon }
 ]
 
-function handleThemeChange() { settingsStore.setTheme(theme.value as 'dark' | 'light') }
-function handleLanguageChange() {
-  settingsStore.setLocale(language.value as 'zh-TW' | 'en-US')
-  locale.value = language.value
+
+function applyThemePreview(themeValue: string) {
+  if (themeValue === 'dark') {
+    document.documentElement.classList.add('dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+  }
 }
-function handleTimezoneChange() { settingsStore.setTimezone(timezone.value) }
+
+function handleThemeChange(opt: { value: string }) {
+  theme.value = opt.value as 'dark' | 'light'
+  applyThemePreview(opt.value)
+}
+
+
+const timezoneOptions = [
+  'UTC',
+  'UTC+1', 'UTC+2', 'UTC+3', 'UTC+4', 'UTC+5', 'UTC+6', 'UTC+7', 'UTC+8', 'UTC+9', 'UTC+10', 'UTC+11', 'UTC+12',
+  'UTC-1', 'UTC-2', 'UTC-3', 'UTC-4', 'UTC-5', 'UTC-6', 'UTC-7', 'UTC-8', 'UTC-9', 'UTC-10', 'UTC-11'
+]
 
 async function saveSettings() {
   saving.value = true
-  try { await settingsStore.saveToServer() }
-  finally { saving.value = false }
+  try {
+
+    settingsStore.setTheme(theme.value as 'dark' | 'light')
+    settingsStore.setLocale(language.value as 'zh-TW' | 'en-US')
+    settingsStore.setTimezone(timezone.value)
+
+
+    locale.value = language.value
+
+
+    settingsStore.applyTimezone(timezone.value)
+
+
+    notificationStore.success(t('settings.saveSuccess'), 'Settings')
+  } catch (e) {
+    notificationStore.error(t('settings.saveFailed'), 'Error')
+  } finally {
+    saving.value = false
+  }
 }
 
 onMounted(() => {

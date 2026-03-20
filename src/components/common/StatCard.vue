@@ -14,7 +14,7 @@
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm text-surface-600 dark:text-surface-400 font-medium tracking-wide uppercase">{{ label }}</p>
-          <p class="text-3xl font-bold font-mono mt-2 text-surface-900 group-hover:text-primary transition-colors duration-300 dark:text-white">{{ value }}</p>
+          <p class="text-3xl font-bold font-mono mt-2 text-surface-900 dark:text-white group-hover:text-primary transition-colors duration-300">{{ value }}</p>
           <div
             v-if="trend"
             class="flex items-center mt-3 text-sm font-medium"

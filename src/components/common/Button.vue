@@ -50,11 +50,11 @@ const sizeClass = computed(() => {
 
 const variantClass = computed(() => {
   const map: Record<string, string> = {
-    primary:   'bg-cyan-500 text-surface-950 hover:bg-cyan-400 shadow-glow-sm hover:shadow-glow font-semibold',
-    secondary: 'bg-surface-700 text-surface-200 hover:bg-surface-600 border border-surface-600',
-    ghost:     'text-surface-300 hover:text-surface-100 hover:bg-surface-800',
-    danger:    'bg-error text-white hover:bg-red-600 shadow-glow-error',
-    outline:   'border border-surface-600 text-surface-300 hover:border-cyan-500/50 hover:text-cyan-400',
+    primary:   'bg-cyan-500 text-surface-950 hover:bg-cyan-400 shadow-glow-sm hover:shadow-glow font-semibold dark:bg-cyan-500 dark:text-surface-950 dark:hover:bg-cyan-400',
+    secondary: 'bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-300 dark:bg-surface-700 dark:text-surface-200 dark:hover:bg-surface-600 dark:border-surface-600',
+    ghost:     'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-surface-300 dark:hover:text-surface-100 dark:hover:bg-surface-800',
+    danger:    'bg-error text-white hover:bg-red-600 shadow-glow-error dark:bg-error dark:hover:bg-red-600',
+    outline:   'border border-gray-300 text-gray-700 hover:border-cyan-500 hover:text-cyan-600 dark:border-surface-600 dark:text-surface-300 dark:hover:border-cyan-500/50 dark:hover:text-cyan-400',
   }
   return map[props.variant]
 })

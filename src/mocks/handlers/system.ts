@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw'
 
 export const systemHandlers = [
-  // System status
+
   http.get('/api/system/status', () => {
     return HttpResponse.json({
       success: true,
@@ -16,7 +16,7 @@ export const systemHandlers = [
         },
         economy: {
           mode: 'Local',
-          currencyName: '金幣'
+          currencyName: 'Coins'
         },
         redis: {
           connected: true
@@ -33,7 +33,7 @@ export const systemHandlers = [
     })
   }),
 
-  // System metrics
+
   http.get('/api/system/metrics', () => {
     return HttpResponse.json({
       success: true,
@@ -47,7 +47,7 @@ export const systemHandlers = [
     })
   }),
 
-  // Redis status
+
   http.get('/api/system/redis', () => {
     return HttpResponse.json({
       success: true,
@@ -59,7 +59,7 @@ export const systemHandlers = [
     })
   }),
 
-  // Circuit breaker status
+
   http.get('/api/system/breaker', () => {
     return HttpResponse.json({
       success: true,

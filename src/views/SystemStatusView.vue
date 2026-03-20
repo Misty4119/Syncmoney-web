@@ -14,16 +14,20 @@
         </template>
         <div class="space-y-3">
           <div class="flex justify-between text-sm">
-            <span class="text-surface-400">{{ t('system.version') }}</span>
-            <span class="font-mono text-surface-200">{{ status.plugin?.version || '1.0.0' }}</span>
+            <span class="text-surface-600 dark:text-surface-400">{{ t('system.version') }}</span>
+            <span class="font-mono text-surface-700 dark:text-surface-200">{{ status.plugin?.version || t('system.version-fallback') }}</span>
           </div>
           <div class="flex justify-between text-sm">
-            <span class="text-surface-400">{{ t('system.mode') }}</span>
-            <Badge :variant="status.plugin?.mode === 'REDIS' ? 'info' : 'default'">{{ status.plugin?.mode || 'Local' }}</Badge>
+            <span class="text-surface-600 dark:text-surface-400">{{ t('system.dbVersion') }}</span>
+            <span class="font-mono text-surface-700 dark:text-surface-200">{{ status.plugin?.dbVersion || t('system.version-fallback') }}</span>
           </div>
           <div class="flex justify-between text-sm">
-            <span class="text-surface-400">{{ t('system.uptime') }}</span>
-            <span class="font-mono text-surface-200">{{ formatUptime(status.plugin?.uptime) }}</span>
+            <span class="text-surface-600 dark:text-surface-400">{{ t('system.mode') }}</span>
+            <Badge :variant="status.plugin?.mode === 'REDIS' ? 'info' : 'default'">{{ status.plugin?.mode || t('system.modeLocal') }}</Badge>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-surface-600 dark:text-surface-400">{{ t('system.uptime') }}</span>
+            <span class="font-mono text-surface-700 dark:text-surface-200">{{ formatUptime(status.plugin?.uptime) }}</span>
           </div>
         </div>
       </Card>
@@ -52,7 +56,7 @@
           </div>
           <div class="flex items-center justify-between text-sm">
             <span class="text-surface-400">{{ t('system.sseStream') }}</span>
-            <StatusDot :status="ws.connected ? 'connected' : 'disconnected'" :label="ws.connected ? t('system.status.connected') : t('system.status.disconnected')" />
+            <StatusDot :status="ws.isConnected ? 'connected' : 'disconnected'" :label="ws.isConnected ? t('system.status.connected') : t('system.status.disconnected')" />
           </div>
         </div>
       </Card>
@@ -75,8 +79,8 @@
             <p class="font-semibold" :class="circuitBreakerClass">
               {{ t(`system.status.${status.circuitBreaker?.state?.toLowerCase() || 'normal'}`) }}
             </p>
-            <p v-if="(status.circuitBreaker as any)?.failCount" class="text-xs text-surface-500 mt-0.5">
-              Failures: {{ (status.circuitBreaker as any).failCount }}
+            <p v-if="status.circuitBreaker?.failCount" class="text-xs text-surface-500 mt-0.5">
+              Failures: {{ status.circuitBreaker.failCount }}
             </p>
           </div>
         </div>
@@ -98,8 +102,8 @@
             <span class="text-base font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-lavender-400 uppercase tracking-wide">{{ t('system.memory') }}</span>
           </div>
         </template>
-        <p class="text-2xl font-bold font-mono text-white mb-3 group-hover:text-cyan-400 transition-colors">
-          {{ formatBytes(metrics.memory?.used) }} <span class="text-surface-500">/</span> {{ formatBytes(metrics.memory?.total) }}
+        <p class="text-2xl font-bold font-mono text-surface-900 dark:text-white mb-3 group-hover:text-cyan-400 transition-colors">
+          {{ formatBytes(metrics.memory?.used) }} <span class="text-surface-400 dark:text-surface-500">/</span> {{ formatBytes(metrics.memory?.total) }}
         </p>
         <div class="w-full bg-surface-950/50 rounded-full h-2 border border-surface-700/50 overflow-hidden shadow-inner relative">
           <div
@@ -110,7 +114,7 @@
             <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
           </div>
         </div>
-        <p class="text-xs text-surface-400 mt-2 font-mono">{{ memoryUsagePercent }}% used</p>
+        <p class="text-xs text-surface-500 dark:text-surface-400 mt-2 font-mono">{{ memoryUsagePercent }}% {{ t('system.memoryUsage') }}</p>
       </Card>
 
       <!-- Threads -->
@@ -123,7 +127,7 @@
             <span class="text-base font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-lavender-400 uppercase tracking-wide">{{ t('system.threads') }}</span>
           </div>
         </template>
-        <p class="text-4xl font-bold font-mono text-white mt-2 group-hover:text-cyan-400 transition-colors">{{ metrics.threads || 0 }}</p>
+        <p class="text-4xl font-bold font-mono text-surface-900 dark:text-white mt-2 group-hover:text-cyan-400 transition-colors">{{ metrics.threads || 0 }}</p>
       </Card>
 
       <!-- TPS -->
@@ -133,12 +137,12 @@
             <div class="p-2 bg-cyan-500/10 rounded-lg group-hover:bg-cyan-500/20 transition-colors">
               <Zap class="w-5 h-5 text-cyan-400 group-hover:animate-pulse" />
             </div>
-            <span class="text-base font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-lavender-400 uppercase tracking-wide">TPS</span>
+            <span class="text-base font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-lavender-400 uppercase tracking-wide">{{ t('system.tps') }}</span>
           </div>
         </template>
         <p class="text-3xl font-bold font-mono" :class="tpsClass">{{ metrics.tps?.toFixed(1) || '20.0' }}</p>
         <Badge :variant="tpsBadgeVariant" class="mt-2">
-          {{ metrics.tps >= 18 ? 'Healthy' : metrics.tps >= 10 ? 'Degraded' : 'Critical' }}
+          {{ metrics.tps >= 18 ? t('system.tpsHealthy') : metrics.tps >= 10 ? t('system.tpsDegraded') : t('system.tpsCritical') }}
         </Badge>
       </Card>
     </div>
@@ -148,8 +152,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { apiClient, type SystemStatus } from '@/api/client'
-import { useWebSocket } from '@/composables/useWebSocket'
+import { apiClient, type SystemStatus, type SystemMetrics, type ApiResponse } from '@/api/client'
+import type { SystemAlertEvent } from '@/types/events'
+import { useSSEStore } from '@/stores/sse'
 import { useNotificationStore } from '@/stores/notification'
 import { Package, Wifi, Shield, HardDrive, Cpu, Zap } from 'lucide-vue-next'
 import Card from '@/components/common/Card.vue'
@@ -157,12 +162,14 @@ import Badge from '@/components/common/Badge.vue'
 import StatusDot from '@/components/common/StatusDot.vue'
 
 const { t } = useI18n()
-const ws = useWebSocket()
+const ws = useSSEStore()
 const notificationStore = useNotificationStore()
 
+let refreshInterval: ReturnType<typeof setInterval> | null = null
+
 const status = ref<Partial<SystemStatus>>({})
-const metrics = ref<any>({
-  memory: { used: 0, total: 0, free: 0, max: 0 },
+const metrics = ref<SystemMetrics>({
+  memory: { used: 0, total: 0, free: 0, max: 0, percentage: 0 },
   threads: 0,
   tps: 20.0,
 })
@@ -234,17 +241,17 @@ function formatBytes(bytes?: number): string {
 
 async function loadSystemStatus() {
   try {
-    const response: any = await apiClient.get('/api/system/status')
+    const response = await apiClient.get<ApiResponse<SystemStatus>>('/api/system/status')
     if (response.data?.success && response.data?.data) {
       status.value = response.data.data
     }
     try {
-      const metricsResponse: any = await apiClient.get('/api/system/metrics')
+      const metricsResponse = await apiClient.get<ApiResponse<SystemMetrics>>('/api/system/metrics')
       if (metricsResponse.data?.success && metricsResponse.data?.data) {
         metrics.value = metricsResponse.data.data
       }
     } catch {
-      // metrics endpoint may not always be available
+
     }
   } catch (error) {
     console.error('Failed to load system status:', error)
@@ -253,16 +260,23 @@ async function loadSystemStatus() {
 
 onMounted(() => {
   loadSystemStatus()
-  ws.connect()
+
+  refreshInterval = setInterval(loadSystemStatus, 10000)
+  
+
   ws.on('circuit_break', () => {
-    notificationStore.addBreakerNotification('WARNING')
+    notificationStore.addBreakerNotification('WARNING', t('notification.circuitBreakerAlert'))
     loadSystemStatus()
   })
-  ws.on('system_alert', (data: any) => {
-    notificationStore.addSystemAlertNotification(data.message || 'System error occurred')
+  ws.on('system_alert', (data: unknown) => {
+    const evt = data as SystemAlertEvent
+    notificationStore.addSystemAlertNotification(evt.message || t('notification.systemError'))
     loadSystemStatus()
   })
 })
 
-onUnmounted(() => { ws.disconnect() })
+onUnmounted(() => { 
+  if (refreshInterval) clearInterval(refreshInterval)
+
+})
 </script>

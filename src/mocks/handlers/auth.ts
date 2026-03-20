@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw'
 
 export const authHandlers = [
-  // Auth verify - used for login
+
   http.get('/api/system/status', ({ request }) => {
     const authHeader = request.headers.get('Authorization')
     if (authHeader && authHeader.startsWith('Bearer ')) {

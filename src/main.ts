@@ -12,7 +12,7 @@ app.use(createPinia())
 app.use(router)
 app.use(i18n)
 
-// MSW initialization (dev only)
+
 if (import.meta.env.DEV) {
   async function startMSW() {
     try {

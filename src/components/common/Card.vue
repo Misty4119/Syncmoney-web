@@ -59,9 +59,9 @@ const bodyClass = computed(() => {
 
 <style scoped>
 .card-header {
-  @apply px-5 py-3 border-b border-surface-700/50;
+  @apply px-5 py-3 border-b border-gray-200 dark:border-surface-700/50;
 }
 .card-footer {
-  @apply px-5 py-3 border-t border-surface-700/50;
+  @apply px-5 py-3 border-t border-gray-200 dark:border-surface-700/50;
 }
 </style>

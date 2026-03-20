@@ -1,5 +1,9 @@
 import axios, { type AxiosInstance } from 'axios'
-import type { ApiResponse, AuditRecord, DashboardStats, SystemStatus, Settings } from './types'
+import type { ApiResponse, AuditRecord, DashboardStats, SystemStatus, Settings, PaginatedResponse, PluginConfig, SystemMetrics, NodeInfo, NodeStatusResponse } from './types'
+import router from '@/router'
+
+import { useNotificationStore } from '@/stores/notification'
+import { useNodesStore } from '@/stores/nodes'
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: '',
@@ -9,12 +13,19 @@ const apiClient: AxiosInstance = axios.create({
   }
 })
 
-// Request interceptor to add auth header
+
 apiClient.interceptors.request.use(
   (config) => {
-    const apiKey = localStorage.getItem('apiKey')
-    if (apiKey) {
-      config.headers.Authorization = `Bearer ${apiKey}`
+    const nodesStore = useNodesStore()
+    if (nodesStore.currentNode) {
+      config.baseURL = nodesStore.currentNode.url
+      config.headers.Authorization = `Bearer ${nodesStore.currentNode.apiKey}`
+    } else {
+      config.baseURL = ''
+      const apiKey = localStorage.getItem('apiKey')
+      if (apiKey) {
+        config.headers.Authorization = `Bearer ${apiKey}`
+      }
     }
     return config
   },
@@ -23,17 +34,35 @@ apiClient.interceptors.request.use(
   }
 )
 
-// Response interceptor for error handling
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+
+    const status = error.response?.status
+    const notificationStore = useNotificationStore()
+    
+    if (status === 401) {
       localStorage.removeItem('apiKey')
-      window.location.href = '/login'
+
+      notificationStore.addNotification('error', 'Session Expired', 'Your session has expired. Please log in again.')
+      router.push('/login')
+    } else if (status === 403) {
+
+      notificationStore.addNotification('error', 'Permission Denied', 'You do not have permission to perform this action.')
+      router.push('/?error=forbidden')
+    } else if (status === 500) {
+
+      notificationStore.addNotification('error', 'Server Error', 'An internal server error occurred. Please try again later.')
+      router.push('/?error=server_error')
+    } else if (status === 429) {
+
+      notificationStore.addNotification('warning', 'Rate Limited', 'Too many requests. Please wait a moment before retrying.')
+      router.push('/?error=rate_limited')
     }
     return Promise.reject(error)
   }
 )
 
 export { apiClient }
-export type { ApiResponse, AuditRecord, DashboardStats, SystemStatus, Settings }
+export type { ApiResponse, AuditRecord, DashboardStats, SystemStatus, Settings, PaginatedResponse, PluginConfig, SystemMetrics, NodeInfo, NodeStatusResponse }

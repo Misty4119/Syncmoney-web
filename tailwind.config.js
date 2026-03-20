@@ -8,6 +8,10 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Vue Tailwind Datepicker theme colors
+        "vtd-primary": "violet",
+        "vtd-secondary": "gray",
+
         // Soft Violet / Indigo (Light Mode Primary/Secondary)
         violet: {
           50: '#f5f3ff',

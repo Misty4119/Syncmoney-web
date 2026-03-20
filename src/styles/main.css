@@ -27,7 +27,7 @@
     --text-muted: theme('colors.surface.400');
 
     /* Glassmorphism (Light) */
-    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-bg: rgba(255, 255, 255, 0.3);;
     --glass-border: rgba(148, 163, 184, 0.2);
     --glass-blur: 24px;
     --glass-shadow-color: rgba(31, 38, 135, 0.07);
