@@ -1,0 +1,134 @@
+name: Release Web Admin
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Package and publish Web Admin
+    if: github.repository == 'Misty4119/Syncmoney-web'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Validate release metadata
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta)\.[0-9]+)?$ ]]; then
+            echo "Web release tag must use v1.2.3, v1.2.3-alpha.1, or v1.2.3-beta.1; got: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          version="${RELEASE_TAG#v}"
+          package_version="$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version")"
+          public_version="$(node -p "JSON.parse(require('fs').readFileSync('public/version.json', 'utf8')).version")"
+          if [[ "$package_version" != "$version" ]]; then
+            echo "package.json version $package_version does not match $version" >&2
+            exit 1
+          fi
+          if [[ "$public_version" != "$version" ]]; then
+            echo "public/version.json version $public_version does not match $version" >&2
+            exit 1
+          fi
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 10.22.0
+          run_install: false
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Frontend checks
+        run: |
+          pnpm typecheck
+          pnpm test:coverage
+          pnpm build
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: End-to-end tests
+        run: pnpm test:e2e
+
+      - name: Create deterministic source archive
+        shell: bash
+        run: bash scripts/package-release.sh
+
+      - name: Verify source archive contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! tar -tzf syncmoney-web.tar.gz | grep -q '^syncmoney-web/package.json$'; then
+            echo 'The source archive has no fixed syncmoney-web/ top-level directory.' >&2
+            exit 1
+          fi
+          if tar -tzf syncmoney-web.tar.gz | grep -E '(^|/)(node_modules|dist|\.vscode|coverage|test-results|playwright-report)(/|$)' >/dev/null; then
+            echo 'The source archive contains an excluded generated or internal directory.' >&2
+            exit 1
+          fi
+
+      - name: Create SHA-256 checksum
+        shell: bash
+        run: sha256sum syncmoney-web.tar.gz > syncmoney-web.sha256
+
+      - name: Attest Web release artifacts
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            syncmoney-web.tar.gz
+            syncmoney-web.sha256
+
+      - name: Prepare release notes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+            -f "tag_name=$RELEASE_TAG" \
+            --jq .body > release-notes.md
+
+      - name: Publish Web GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          prerelease_args=()
+          if [[ "$RELEASE_TAG" == *-alpha.* || "$RELEASE_TAG" == *-beta.* ]]; then
+            prerelease_args+=(--prerelease)
+          fi
+          gh release create "$RELEASE_TAG" \
+            syncmoney-web.tar.gz \
+            syncmoney-web.sha256 \
+            --verify-tag \
+            --title "Syncmoney Web ${RELEASE_TAG#v}" \
+            --notes-file release-notes.md \
+            "${prerelease_args[@]}"

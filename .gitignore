@@ -10,6 +10,8 @@ build/
 
 
 Syncmoney-web.tar.gz
+syncmoney-web.sha256
+release-package/
 
 .env
 .env.local
