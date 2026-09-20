@@ -30,7 +30,7 @@ A web administration interface for cross-server game currency synchronization. I
 - **PWA:** vite-plugin-pwa (Workbox, manifest, offline caching)
 - **Testing:** Vitest (unit), Playwright (E2E), MSW (API mocking)
 - **HTTP:** Axios (interceptors: Bearer API Key, 401 logout, 403/429/500 error handling)
-- **Real-time:** Server-Sent Events (SSE) + WebSocket with auto-reconnect (exponential backoff + jitter)
+- **Real-time:** Server-Sent Events (SSE) with auto-reconnect (exponential backoff + jitter); WebSocket code remains experimental while the backend transport is incomplete.
 
 ---
 
@@ -45,6 +45,9 @@ Syncmoney-web/
 ├── tailwind.config.js      # Theme colours, animations, surface/glow
 ├── tsconfig.json
 ├── vitest.config.ts        # Unit tests (happy-dom, @ alias)
+├── scripts/
+│   ├── build-embedded.mjs   # Version-aware build helper
+│   └── package-release.sh   # Deterministic source archive builder
 ├── playwright.config.ts    # E2E (Chromium, baseURL 5173)
 ├── postcss.config.js
 ├── public/
@@ -135,8 +138,8 @@ Syncmoney-web/
 
 ## Requirements
 
-- **Node.js:** 20 or later
-- **Package manager:** pnpm (project uses `pnpm-lock.yaml`)
+- **Node.js:** 24.x (`>=24 <25`)
+- **Package manager:** pnpm 10.22.0 (project uses `pnpm-lock.yaml`)
 
 ---
 
@@ -167,10 +170,20 @@ pnpm run preview
 |--------|-------------|
 | `pnpm run dev` | Start Vite dev server; register MSW in development. |
 | `pnpm run build` | Run `vue-tsc --noEmit` then `vite build`. |
+| `pnpm run build:embedded` | Build with the selected version metadata; in the core repository it also refreshes the embedded bundle and extraction lists. |
 | `pnpm run preview` | Serve `dist` with a local static server. |
 | `pnpm run typecheck` | Run `vue-tsc --noEmit` only. |
 | `pnpm run test:unit` | Run Vitest unit tests. |
+| `pnpm run test:coverage` | Run Vitest with the coverage reporter used by CI. |
 | `pnpm run test:e2e` | Run Playwright E2E tests (starts `pnpm run dev` when needed). |
+
+## Release contract
+
+The core [Syncmoney repository](https://github.com/Misty4119/Syncmoney) is the canonical source for this frontend. Core release tags do not use `v`; this public mirror uses `v` tags such as `v1.3.2`. The core release workflow synchronizes source and version metadata here, pushes the Web tag, and waits for this repository's release workflow before publishing the core plugin release.
+
+The Web release contains `syncmoney-web.tar.gz` and `syncmoney-web.sha256`. The archive has a fixed `syncmoney-web/` top-level directory and contains source, public assets, package metadata, tests, and configuration. It excludes `dist`, `node_modules`, coverage, Playwright output, editor settings, and GitHub workflow internals. Syncmoney downloads the archive and runs the frontend install/build locally.
+
+The core repository also contains an embedded copy. When working in the core repository, `pnpm build:embedded` clears and replaces `src/main/resources/syncmoney-web/dist` and updates `WebAdminServer.extractIndividualFiles` for the resulting file names. Keep those generated changes together.
 
 ---
 
