@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing Web tag to publish'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -24,11 +30,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 
       - name: Validate release metadata
         shell: bash
         env:
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
         run: |
           set -euo pipefail
           if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta)\.[0-9]+)?$ ]]; then
@@ -83,11 +90,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if ! tar -tzf syncmoney-web.tar.gz | grep -q '^syncmoney-web/package.json$'; then
+          tar -tzf syncmoney-web.tar.gz > archive-contents.txt
+          if ! grep -Fxq 'syncmoney-web/package.json' archive-contents.txt; then
             echo 'The source archive has no fixed syncmoney-web/ top-level directory.' >&2
             exit 1
           fi
-          if tar -tzf syncmoney-web.tar.gz | grep -E '(^|/)(node_modules|dist|\.vscode|coverage|test-results|playwright-report)(/|$)' >/dev/null; then
+          if grep -E '(^|/)(node_modules|dist|\.vscode|coverage|test-results|playwright-report)(/|$)' archive-contents.txt >/dev/null; then
             echo 'The source archive contains an excluded generated or internal directory.' >&2
             exit 1
           fi
@@ -107,7 +115,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
         run: |
           set -euo pipefail
           gh api --method POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
@@ -118,7 +126,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
         run: |
           set -euo pipefail
           prerelease_args=()
