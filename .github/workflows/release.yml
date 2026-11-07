@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing Web tag to publish'
+        description: 'Existing Web tag to prepare as a draft'
         required: true
         type: string
 
@@ -122,7 +122,7 @@ jobs:
             -f "tag_name=$RELEASE_TAG" \
             --jq .body > release-notes.md
 
-      - name: Publish Web GitHub Release
+      - name: Create Web GitHub Release draft
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -133,10 +133,12 @@ jobs:
           if [[ "$RELEASE_TAG" == *-alpha.* || "$RELEASE_TAG" == *-beta.* ]]; then
             prerelease_args+=(--prerelease)
           fi
+          # The canonical Core workflow publishes this release after its production gate.
           gh release create "$RELEASE_TAG" \
             syncmoney-web.tar.gz \
             syncmoney-web.sha256 \
             --verify-tag \
+            --draft \
             --title "Syncmoney Web ${RELEASE_TAG#v}" \
             --notes-file release-notes.md \
             "${prerelease_args[@]}"
